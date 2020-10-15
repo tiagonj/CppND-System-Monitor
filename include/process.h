@@ -8,7 +8,7 @@ Basic class for Process representation
 It contains relevant attributes as shown below
 */
 class Process {
-public:
+ public:
   Process(int pid);
   int Pid() const;
   std::string User() const;
@@ -20,7 +20,7 @@ public:
   bool HasEnded() const;
   void Refresh(long systemUpTime, long systemActiveJiffiesDelta);
 
-private:
+ private:
   int pid_{-1};
   std::string user_;
   std::string cmd_;

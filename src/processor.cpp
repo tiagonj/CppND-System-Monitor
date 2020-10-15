@@ -1,18 +1,12 @@
 #include "processor.h"
+
 #include "linux_parser.h"
 
-float Processor::Utilization() const
-{
-  return utilization_;
-}
+float Processor::Utilization() const { return utilization_; }
 
-unsigned long long Processor::ActiveJiffiesDelta()
-{
-  return actvJiffiesDelta_;
-}
+unsigned long long Processor::ActiveJiffiesDelta() { return actvJiffiesDelta_; }
 
-void Processor::Refresh()
-{
+void Processor::Refresh() {
   unsigned long long actvJiffies = LinuxParser::ActiveJiffies();
   unsigned long long idleJiffies = LinuxParser::IdleJiffies();
 

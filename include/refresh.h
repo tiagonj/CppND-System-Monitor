@@ -1,9 +1,8 @@
 #ifndef REFRESH_INTERFACE_H
 #define REFRESH_INTERFACE_H
 
-class RefreshInterface
-{
-public:
+class RefreshInterface {
+ public:
   virtual void Refresh() = 0;
 };
 

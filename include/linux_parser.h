@@ -60,9 +60,10 @@ bool ProcessHasEnded(int pid);
 
 // Users
 std::string UserFromUid(int uid);
-  
+
 // Helpers
-std::string GetRestOfLineAfterToken(const std::string filepath, const std::string token);
+std::string GetRestOfLineAfterToken(const std::string filepath,
+                                    const std::string token);
 void SkipNTokens(std::ifstream& filestream, const int n);
 
 };  // namespace LinuxParser

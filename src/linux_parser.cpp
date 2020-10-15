@@ -1,14 +1,14 @@
+#include "linux_parser.h"
+
+#include <unistd.h>
+
 #include <cassert>
 #include <cmath>
 #include <experimental/filesystem>
 #include <string>
 #include <vector>
-#include <unistd.h>
-
-#include "linux_parser.h"
 
 using dir_it = std::experimental::filesystem::directory_iterator;
-using std::experimental::filesystem::path;
 using std::ifstream;
 using std::istringstream;
 using std::stof;
@@ -16,6 +16,7 @@ using std::stoi;
 using std::string;
 using std::to_string;
 using std::vector;
+using std::experimental::filesystem::path;
 
 // DONE: An example of how to read data from the filesystem
 string LinuxParser::OperatingSystem() {
@@ -54,18 +55,14 @@ string LinuxParser::Kernel() {
 }
 
 // Get list of PIDs for all active processes
-vector<int> LinuxParser::Pids()
-{
+vector<int> LinuxParser::Pids() {
   vector<int> pids;
 
-  for(auto it = dir_it(kProcDirectory); it != dir_it(); ++it)
-  {
-    if(std::experimental::filesystem::is_directory(it->path()))
-    {
+  for (auto it = dir_it(kProcDirectory); it != dir_it(); ++it) {
+    if (std::experimental::filesystem::is_directory(it->path())) {
       string foldername(it->path().stem());
 
-      if (std::all_of(foldername.begin(), foldername.end(), isdigit))
-      {
+      if (std::all_of(foldername.begin(), foldername.end(), isdigit)) {
         int pid = stoi(foldername);
         pids.push_back(pid);
       }
@@ -75,8 +72,8 @@ vector<int> LinuxParser::Pids()
 }
 
 // Read and return value for one line of meminfo file
-unsigned long LinuxParser::MemoryUtilizationEntry(string path, string entryName)
-{
+unsigned long LinuxParser::MemoryUtilizationEntry(string path,
+                                                  string entryName) {
   string line = LinuxParser::GetRestOfLineAfterToken(path, entryName);
   std::replace(line.begin(), line.end(), ':', ' ');
 
@@ -88,11 +85,11 @@ unsigned long LinuxParser::MemoryUtilizationEntry(string path, string entryName)
 }
 
 // Read and return system memory utilization information
-float LinuxParser::MemoryUtilization()
-{
+float LinuxParser::MemoryUtilization() {
   string path = kProcDirectory + kMeminfoFilename;
 
-  // Could have read whole file into a dictionary but decided to keep this simple
+  // Could have read whole file into a dictionary but decided to keep this
+  // simple
   unsigned long MemTotal = MemoryUtilizationEntry(path, "MemTotal:");
   unsigned long MemFree = MemoryUtilizationEntry(path, "MemFree:");
   unsigned long Buffers = MemoryUtilizationEntry(path, "Buffers:");
@@ -109,14 +106,11 @@ float LinuxParser::MemoryUtilization()
 }
 
 // Read and return the system uptime
-long LinuxParser::UpTime()
-{
+long LinuxParser::UpTime() {
   ifstream filestream(kProcDirectory + kUptimeFilename);
-  if (filestream.is_open())
-  {
+  if (filestream.is_open()) {
     float upTimeValueFloat;
-    if (filestream >> upTimeValueFloat)
-    {
+    if (filestream >> upTimeValueFloat) {
       return std::roundf(upTimeValueFloat);
     }
   }
@@ -125,16 +119,14 @@ long LinuxParser::UpTime()
 }
 
 // Read and return CPU utilization
-vector<unsigned long long> LinuxParser::CpuUtilization()
-{
+vector<unsigned long long> LinuxParser::CpuUtilization() {
   string path = kProcDirectory + kStatFilename;
   string cpuLine = GetRestOfLineAfterToken(path, "cpu");
 
   vector<string> raw;
   string raw_time;
   istringstream linestream(cpuLine);
-  while (linestream >> raw_time)
-  {
+  while (linestream >> raw_time) {
     raw.push_back(raw_time);
   }
   assert(raw.size() == CPUStates::kNumCpuStates_);
@@ -153,8 +145,8 @@ vector<unsigned long long> LinuxParser::CpuUtilization()
   unsigned long long nirq = stoull(raw[CPUStates::kIRQ_]);
   unsigned long long sirq = stoull(raw[CPUStates::kSoftIRQ_]);
   unsigned long long stel = stoull(raw[CPUStates::kSteal_]);
-  //raw_time_t gest = stoull(raw[kGuest_]);     // normal guest
-  //raw_time_t gstn = stoull(raw[kGuestNice_]); // niced guest
+  // raw_time_t gest = stoull(raw[kGuest_]);     // normal guest
+  // raw_time_t gstn = stoull(raw[kGuestNice_]); // niced guest
 
   unsigned long long all_actv = user + nice + syst + nirq + sirq + stel;
   unsigned long long all_idle = idle + iowt;
@@ -164,46 +156,40 @@ vector<unsigned long long> LinuxParser::CpuUtilization()
 }
 
 // Read and return the number of jiffies for the system
-unsigned long long LinuxParser::Jiffies()
-{
+unsigned long long LinuxParser::Jiffies() {
   return LinuxParser::CpuUtilization()[0];
 }
 
 // Read and return the number of active jiffies for the system
-unsigned long long LinuxParser::ActiveJiffies()
-{
+unsigned long long LinuxParser::ActiveJiffies() {
   return LinuxParser::CpuUtilization()[1];
 }
 
 // Read and return the number of idle jiffies for the system
-unsigned long long LinuxParser::IdleJiffies()
-{
+unsigned long long LinuxParser::IdleJiffies() {
   return LinuxParser::CpuUtilization()[2];
 }
 
 // Read and return the number of active jiffies for a PID
-unsigned long long LinuxParser::ActiveJiffies(int pid)
-{
+unsigned long long LinuxParser::ActiveJiffies(int pid) {
   string path = kProcDirectory + kSep + to_string(pid) + kSep + kStatFilename;
   ifstream filestream(path);
 
-  if (filestream.is_open())
-  {
+  if (filestream.is_open()) {
     unsigned long utime, stime;
 
     // See https://man7.org/linux/man-pages/man5/proc.5.html
     // and https://stackoverflow.com/a/16736599
     LinuxParser::SkipNTokens(filestream, 13);
-    filestream >> utime;              // 14
-    filestream >> stime;              // 15
+    filestream >> utime;  // 14
+    filestream >> stime;  // 15
     return utime + stime;
   }
 
   return 0;
 }
 
-int LinuxParser::GetProcessesEntry(std::string entryName)
-{
+int LinuxParser::GetProcessesEntry(std::string entryName) {
   string path = kProcDirectory + kStatFilename;
   string line = LinuxParser::GetRestOfLineAfterToken(path, entryName);
 
@@ -214,56 +200,48 @@ int LinuxParser::GetProcessesEntry(std::string entryName)
 }
 
 // Read and return the total number of processes
-int LinuxParser::TotalProcesses()
-{
+int LinuxParser::TotalProcesses() {
   // NOTE: this is actually the total number of forks since boot,
   // e.g. see: https://man7.org/linux/man-pages/man5/proc.5.html
   return GetProcessesEntry("processes");
 }
 
 // Read and return the number of running processes
-int LinuxParser::RunningProcesses()
-{
+int LinuxParser::RunningProcesses() {
   return GetProcessesEntry("procs_running");
 }
 
 // Return path
-string LinuxParser::ProcessFolderPath(int pid)
-{
+string LinuxParser::ProcessFolderPath(int pid) {
   return kProcDirectory + kSep + to_string(pid) + kSep;
 }
 
 // Read and return the command associated with a process
-string LinuxParser::Command(int pid)
-{
+string LinuxParser::Command(int pid) {
   string cmd;
   string path = LinuxParser::ProcessFolderPath(pid) + kSep + kCmdlineFilename;
   ifstream filestream(path);
-  if (filestream.is_open())
-  {
+  if (filestream.is_open()) {
     std::getline(filestream, cmd);
   }
   return cmd;
 }
 
 // Read and return the memory used by a process (in MB)
-string LinuxParser::Ram(int pid)
-{
+string LinuxParser::Ram(int pid) {
   string path = LinuxParser::ProcessFolderPath(pid) + kStatusFilename;
   string line = LinuxParser::GetRestOfLineAfterToken(path, "VmSize:");
 
   int ramInKb;
   istringstream linestream(line);
-  if (linestream >> ramInKb)
-  {
-    return to_string((int)std::round(ramInKb / 1000.0)); // KB to MB
+  if (linestream >> ramInKb) {
+    return to_string((int)std::round(ramInKb / 1000.0));  // KB to MB
   }
   return string("0");
 }
 
 // Read and return the user ID associated with a process
-int LinuxParser::Uid(int pid)
-{
+int LinuxParser::Uid(int pid) {
   string path = LinuxParser::ProcessFolderPath(pid) + kStatusFilename;
   string line = LinuxParser::GetRestOfLineAfterToken(path, "Uid:");
 
@@ -274,15 +252,13 @@ int LinuxParser::Uid(int pid)
 }
 
 // Read and return the start time (after boot) of a process
-long LinuxParser::StartTimeAfterBoot(int pid)
-{
+long LinuxParser::StartTimeAfterBoot(int pid) {
   string path = LinuxParser::ProcessFolderPath(pid) + kStatFilename;
   ifstream filestream(path);
 
   long startTime{0};
 
-  if (filestream.is_open())
-  {
+  if (filestream.is_open()) {
     LinuxParser::SkipNTokens(filestream, 21);
     filestream >> startTime;
     startTime /= sysconf(_SC_CLK_TCK);
@@ -291,32 +267,26 @@ long LinuxParser::StartTimeAfterBoot(int pid)
   return startTime;
 }
 
-bool LinuxParser::ProcessHasEnded(int pid)
-{
+bool LinuxParser::ProcessHasEnded(int pid) {
   std::error_code ec;
   string path{LinuxParser::ProcessFolderPath(pid)};
   return !std::experimental::filesystem::is_directory(path, ec);
 }
 
 // Get user name from user ID
-std::string LinuxParser::UserFromUid(int uid)
-{
+std::string LinuxParser::UserFromUid(int uid) {
   string line;
   string name, pwd, userId;
 
   ifstream filestream(kPasswordPath);
-  if (filestream.is_open())
-  {
-    while (std::getline(filestream, line))
-    {
+  if (filestream.is_open()) {
+    while (std::getline(filestream, line)) {
       // Replace ':' with ' ' to ease parsing below
       std::replace(line.begin(), line.end(), ':', ' ');
 
       istringstream linestream(line);
-      if (linestream >> name >> pwd >> userId)
-      {
-        if (std::stoi(userId) == uid)
-        {
+      if (linestream >> name >> pwd >> userId) {
+        if (std::stoi(userId) == uid) {
           return name;
         }
       }
@@ -326,20 +296,17 @@ std::string LinuxParser::UserFromUid(int uid)
   return name;  // Not found (empty string)
 }
 
-string LinuxParser::GetRestOfLineAfterToken(const string filepath, const std::string token)
-{
+string LinuxParser::GetRestOfLineAfterToken(const string filepath,
+                                            const std::string token) {
   string result;
   ifstream filestream(filepath);
 
-  if (filestream.is_open())
-  {
+  if (filestream.is_open()) {
     string line;
-    while (std::getline(filestream, line))
-    {
+    while (std::getline(filestream, line)) {
       string first;
       istringstream linestream(line);
-      if ((linestream >> first) && (first == token))
-      {
+      if ((linestream >> first) && (first == token)) {
         std::getline(linestream, result);
       }
     }
@@ -348,13 +315,10 @@ string LinuxParser::GetRestOfLineAfterToken(const string filepath, const std::st
   return result;
 }
 
-void LinuxParser::SkipNTokens(std::ifstream& filestream, const int n)
-{
-  if (n > 0)
-  {
+void LinuxParser::SkipNTokens(std::ifstream& filestream, const int n) {
+  if (n > 0) {
     string dummy;
-    for (int ii = 0; ii < n; ++ii)
-    {
+    for (int ii = 0; ii < n; ++ii) {
       filestream >> dummy;
     }
   }

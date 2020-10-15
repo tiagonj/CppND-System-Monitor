@@ -4,19 +4,17 @@
 #include <string>
 #include <unordered_map>
 
-// Users is a singleton class
-class Users
-{
-public:
+class Users {
+ public:
   static std::string LookUpUserName(int uid);
 
-private:
-  // Note: we could also delete the copy & move 
+ private:
+  // Note: we could also delete the copy & move
   // c'tors and assignment op's but the singleton's
   // ref is never exposed, so not strictly needed.
   Users() {}
 
-private:
+ private:
   std::string GetNameFromUid(int uid);
   std::unordered_map<int, std::string> users_map_;
 };
