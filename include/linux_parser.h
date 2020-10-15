@@ -20,7 +20,7 @@ const std::string kPasswordPath{"/etc/passwd"};
 const std::string kSep{"/"};
 
 // System
-unsigned long MemoryUtilizationEntry(std::ifstream& f, std::string expectedEntryName);
+unsigned long MemoryUtilizationEntry(std::string path, std::string entryName);
 float MemoryUtilization();
 long UpTime();
 std::vector<int> Pids();

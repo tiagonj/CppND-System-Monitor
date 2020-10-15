@@ -73,44 +73,37 @@ vector<int> LinuxParser::Pids() {
 }
 
 // Read and return value for one line of meminfo file
-unsigned long LinuxParser::MemoryUtilizationEntry(std::ifstream& f, std::string expectedEntryName)
+unsigned long LinuxParser::MemoryUtilizationEntry(std::string path, std::string entryName)
 {
-  // Get line and replace ':' with ' ' (eases checking below)
-  string line;
-  std::getline(f, line);
+  string line = LinuxParser::GetRestOfLineAfterToken(path, entryName);
   std::replace(line.begin(), line.end(), ':', ' ');
 
-  // Extract entry name and value from line
+  // Extract value from line
+  unsigned long value{0U};
   istringstream linestream(line);
-  string entryName, value;
-
-  if (linestream >> entryName >> value)
-  {
-    assert(entryName == expectedEntryName);
-    return std::stoul(value);
-  }
-  
-  return 0U;
+  linestream >> value;
+  return value;
 }
 
 // Read and return system memory utilization information
 float LinuxParser::MemoryUtilization()
 {
-  ifstream filestream(kProcDirectory + kMeminfoFilename);
-  float utilization{0.0};
+  string path = kProcDirectory + kMeminfoFilename;
 
-  if (filestream.is_open())
-  {
-    // Could have read whole file into a dictionary but decided to keep this simple
-    unsigned long MemTotal = MemoryUtilizationEntry(filestream, "MemTotal");
-    unsigned long MemFree = MemoryUtilizationEntry(filestream, "MemFree");
+  // Could have read whole file into a dictionary but decided to keep this simple
+  unsigned long MemTotal = MemoryUtilizationEntry(path, "MemTotal:");
+  unsigned long MemFree = MemoryUtilizationEntry(path, "MemFree:");
+  unsigned long Buffers = MemoryUtilizationEntry(path, "Buffers:");
+  unsigned long Cached = MemoryUtilizationEntry(path, "Cached:");
+  unsigned long SReclaimable = MemoryUtilizationEntry(path, "SReclaimable:");
+  unsigned long Shmem = MemoryUtilizationEntry(path, "Shmem:");
 
-    // Simple calculation
-    unsigned long memUsed = MemTotal - MemFree;
-    utilization = ((float)memUsed) / MemTotal;
-  }
-
-  return utilization;
+  // Calculation taken from https://stackoverflow.com/a/41251290
+  // Value returned here corresponds to the "(green)" signal
+  unsigned long TotalUsed = MemTotal - MemFree;
+  unsigned long CachedMem = Cached + SReclaimable - Shmem;
+  unsigned long NonCacheNorBufferUsedMem = TotalUsed - (Buffers + CachedMem);
+  return ((float)NonCacheNorBufferUsedMem) / MemTotal;
 }
 
 // Read and return the system uptime
