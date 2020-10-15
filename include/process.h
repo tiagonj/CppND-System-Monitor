@@ -10,14 +10,14 @@ It contains relevant attributes as shown below
 class Process {
 public:
   Process(int pid);
-  int Pid();
-  std::string User();
-  std::string Command();
-  float CpuUtilization();
-  std::string Ram();
-  int RamAsInt();
-  long UpTime();
-  bool HasEnded();
+  int Pid() const;
+  std::string User() const;
+  std::string Command() const;
+  float CpuUtilization() const;
+  std::string Ram() const;
+  int RamAsInt() const;
+  long UpTime() const;
+  bool HasEnded() const;
   void Refresh(long systemUpTime, long systemActiveJiffiesDelta);
 
 private:

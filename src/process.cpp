@@ -25,28 +25,28 @@ Process::Process(int pid)
 }
 
 // Return this process's ID
-int Process::Pid() { return pid_; }
+int Process::Pid() const { return pid_; }
 
 // Return this process's CPU utilization
-float Process::CpuUtilization() { return cpu_utilization_; }
+float Process::CpuUtilization() const { return cpu_utilization_; }
 
 // Return the command that generated this process
-string Process::Command() { return cmd_; }
+string Process::Command() const { return cmd_; }
 
 // Return this process's memory utilization
-string Process::Ram() { return to_string(ram_); }
+string Process::Ram() const { return to_string(ram_); }
 
 // Return this process's memory utilization (as int)
-int Process::RamAsInt() { return ram_; }
+int Process::RamAsInt() const { return ram_; }
 
 // Return the user (name) that generated this process
-string Process::User() { return user_; }
+string Process::User() const { return user_; }
 
 // Return the age of this process (in seconds)
-long Process::UpTime() { return upTime_; }
+long Process::UpTime() const { return upTime_; }
 
 // Returns 'true' if the process has ended
-bool Process::HasEnded()
+bool Process::HasEnded() const
 {
   return LinuxParser::ProcessHasEnded(pid_);
 }
@@ -66,8 +66,6 @@ void Process::Refresh(long systemUpTime, long systemActiveJiffiesDelta)
 
   if (activeJiffies == 0U)
   {
-    ram_ = 0;
-    upTime_ = 0;
     cpu_utilization_ = 0.0;
   }
   else
