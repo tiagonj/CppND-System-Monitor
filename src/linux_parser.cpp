@@ -291,10 +291,9 @@ long LinuxParser::StartTimeAfterBoot(int pid)
 
 bool LinuxParser::ProcessHasEnded(int pid)
 {
-  (void)pid;
-  //std::error_code ec;
-  //return !fs::is_directory(LinuxParser::ProcessFolderPath(pid), ec);
-  return false;																									// TODO
+  std::error_code ec;
+  string path{LinuxParser::ProcessFolderPath(pid)};
+  return !std::experimental::filesystem::is_directory(path, ec);
 }
 
 // Get user name from user ID
