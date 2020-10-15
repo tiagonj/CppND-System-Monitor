@@ -166,7 +166,7 @@ void System::SortProcesses()
     sort(processes_.begin(), processes_.end(), 
          [](Process& a, Process& b)
          {
-           return a.RamAsInt() > b.RamAsInt();
+           return a.RamAsInt() < b.RamAsInt();
          });
   }
   else
@@ -175,7 +175,7 @@ void System::SortProcesses()
     sort(processes_.begin(), processes_.end(), 
          [](Process& a, Process& b)
          {
-           return a.RamAsInt() < b.RamAsInt();
+           return a.RamAsInt() > b.RamAsInt();
          });
   }
 }
