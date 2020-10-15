@@ -1,33 +1,84 @@
-#include <unistd.h>
-#include <cctype>
-#include <sstream>
+#include <cassert>
 #include <string>
 #include <vector>
 
+#include "linux_parser.h"
 #include "process.h"
+#include "users.h"
 
 using std::string;
 using std::to_string;
 using std::vector;
 
-// TODO: Return this process's ID
-int Process::Pid() { return 0; }
+Process::Process(int pid)
+  : pid_(pid), user_(""), cmd_("")
+  , startTimeAfterBoot_(-1), ram_(-1), upTime_(-1)
+  , prevActiveJiffies_(0), cpu_utilization_(-1.0)
+{
+  int uid = LinuxParser::Uid(pid);
+  user_ = Users::LookUpUserName(uid);
+  cmd_ = LinuxParser::Command(pid);
+  startTimeAfterBoot_ = LinuxParser::StartTimeAfterBoot(pid);
 
-// TODO: Return this process's CPU utilization
-float Process::CpuUtilization() { return 0; }
+  // Note: Refresh() method is called to populate/refresh the
+  // remaining members
+}
 
-// TODO: Return the command that generated this process
-string Process::Command() { return string(); }
+// Return this process's ID
+int Process::Pid() { return pid_; }
 
-// TODO: Return this process's memory utilization
-string Process::Ram() { return string(); }
+// Return this process's CPU utilization
+float Process::CpuUtilization() { return cpu_utilization_; }
 
-// TODO: Return the user (name) that generated this process
-string Process::User() { return string(); }
+// Return the command that generated this process
+string Process::Command() { return cmd_; }
 
-// TODO: Return the age of this process (in seconds)
-long int Process::UpTime() { return 0; }
+// Return this process's memory utilization
+string Process::Ram() { return to_string(ram_); }
 
-// TODO: Overload the "less than" comparison operator for Process objects
-// REMOVE: [[maybe_unused]] once you define the function
-bool Process::operator<(Process const& a[[maybe_unused]]) const { return true; }
+// Return this process's memory utilization (as int)
+int Process::RamAsInt() { return ram_; }
+
+// Return the user (name) that generated this process
+string Process::User() { return user_; }
+
+// Return the age of this process (in seconds)
+long Process::UpTime() { return upTime_; }
+
+// Returns 'true' if the process has ended
+bool Process::HasEnded()
+{
+  return LinuxParser::ProcessHasEnded(pid_);
+}
+
+// Refresh process data
+void Process::Refresh(long systemUpTime, long systemActiveJiffiesDelta)
+{
+  // Refresh RAM
+  ram_ = std::stoi(LinuxParser::Ram(pid_));
+
+  // Refresh uptime
+  assert(systemUpTime >= startTimeAfterBoot_);
+  upTime_ = systemUpTime - startTimeAfterBoot_;
+
+  // Refresh CPU utilisation information
+  unsigned long long activeJiffies = LinuxParser::ActiveJiffies(pid_);
+
+  if (activeJiffies == 0U)
+  {
+    ram_ = 0;
+    upTime_ = 0;
+    cpu_utilization_ = 0.0;
+  }
+  else
+  {
+    assert(activeJiffies >= prevActiveJiffies_);
+    unsigned long long activeJiffiesDelta = activeJiffies - prevActiveJiffies_;
+
+    cpu_utilization_ = 
+      (systemActiveJiffiesDelta == 0) ?
+      0.0 : ((float)activeJiffiesDelta / systemActiveJiffiesDelta);    
+  }
+
+  prevActiveJiffies_ = activeJiffies;
+}

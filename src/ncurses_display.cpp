@@ -40,7 +40,7 @@ void NCursesDisplay::DisplaySystem(System& system, WINDOW* window) {
   mvwprintw(window, ++row, 2, "Memory: ");
   wattron(window, COLOR_PAIR(1));
   mvwprintw(window, row, 10, "");
-  wprintw(window, ProgressBar(system.MemoryUtilization()).c_str());
+  wprintw(window, ProgressBar(system.MemoryInfo().Utilization()).c_str());
   wattroff(window, COLOR_PAIR(1));
   mvwprintw(window, ++row, 2,
             ("Total Processes: " + to_string(system.TotalProcesses())).c_str());
@@ -53,7 +53,7 @@ void NCursesDisplay::DisplaySystem(System& system, WINDOW* window) {
 }
 
 void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
-                                      WINDOW* window, int n) {
+                                      WINDOW* window, size_t n) {
   int row{0};
   int const pid_column{2};
   int const user_column{9};
@@ -69,7 +69,7 @@ void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
   mvwprintw(window, row, time_column, "TIME+");
   mvwprintw(window, row, command_column, "COMMAND");
   wattroff(window, COLOR_PAIR(2));
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     mvwprintw(window, ++row, pid_column, to_string(processes[i].Pid()).c_str());
     mvwprintw(window, row, user_column, processes[i].User().c_str());
     float cpu = processes[i].CpuUtilization() * 100;
@@ -82,28 +82,97 @@ void NCursesDisplay::DisplayProcesses(std::vector<Process>& processes,
   }
 }
 
-void NCursesDisplay::Display(System& system, int n) {
-  initscr();      // start ncurses
-  noecho();       // do not print input values
-  cbreak();       // terminate ncurses on ctrl + c
-  start_color();  // enable color
+void NCursesDisplay::Display(System& system, size_t n) {
+  initscr();                // start ncurses
+  noecho();                 // do not print input values
+  keypad(stdscr,TRUE);      // enable keys (getch())
+  nodelay(stdscr, TRUE);    // getch() becomes non-blocking
+  cbreak();                 // terminate ncurses on ctrl + c
+  start_color();            // enable color
 
   int x_max{getmaxx(stdscr)};
   WINDOW* system_window = newwin(9, x_max - 1, 0, 0);
-  WINDOW* process_window =
-      newwin(3 + n, x_max - 1, system_window->_maxy + 1, 0);
+  WINDOW* process_window;
 
-  while (1) {
+  bool quit = false;
+  size_t previous_n = n;
+
+  while (!quit) {
+    system.Refresh();
+    size_t num_processes = system.Processes().size();
+    size_t processes_lines = std::min(num_processes, n);
+
+    process_window =
+      newwin(3 + processes_lines, x_max - 1, system_window->_maxy + 1, 0);
+
     init_pair(1, COLOR_BLUE, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     box(system_window, 0, 0);
-    box(process_window, 0, 0);
+    box(process_window, 0, 0);   
     DisplaySystem(system, system_window);
-    DisplayProcesses(system.Processes(), process_window, n);
+    DisplayProcesses(system.Processes(), process_window, processes_lines);
     wrefresh(system_window);
     wrefresh(process_window);
+
+    // Clear lines below process window, when 'n' decreases
+    if (previous_n > processes_lines)
+    {
+      for (size_t offset = n; offset < previous_n; ++offset)
+      {
+        move(9+3+offset, 0);
+        clrtoeol();
+      }
+    }
+
+    move(0,0);         // Keep cursor here
     refresh();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    previous_n = n;
+
+    // Several inputs can be processed between refreshes
+    SleepAndCheckInput(system, 
+                       /* Number of processes */ n,
+                       /* milliseconds */ 250,
+                       /* number of sleeps */ 4,
+                      quit);
   }
   endwin();
+}
+
+void NCursesDisplay::SleepAndCheckInput(System& system, size_t& n, int millisecondsPerSleep, int numberOfSleeps, bool& quit)
+{
+  int ch;
+  quit = false;
+
+  for (int sleep = 0; sleep < numberOfSleeps; ++sleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(millisecondsPerSleep));
+
+    ch = getch();
+    if (ch == KEY_UP)
+    {
+      system.ToggleProcessOrderByCpu();
+    }
+    else if (ch == KEY_DOWN)
+    {
+      system.ToggleProcessOrderByMemory();
+    }
+    else if (ch == '+')
+    {
+      // Increase number of processes displayed (upper limit: # processes)
+      n = (n < system.Processes().size()) ? (n+1) : n;
+    }
+    else if (ch == '-')
+    {
+      // Decrease number of processes displayed (lower limit: 1)
+      if (n > 1)
+      {
+        --n;
+      }
+    }
+    else if (ch == 'q')
+    {
+      quit = true;
+      break;
+    }
+  }
 }

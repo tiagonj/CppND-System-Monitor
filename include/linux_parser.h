@@ -17,11 +17,14 @@ const std::string kMeminfoFilename{"/meminfo"};
 const std::string kVersionFilename{"/version"};
 const std::string kOSPath{"/etc/os-release"};
 const std::string kPasswordPath{"/etc/passwd"};
+const std::string kSep{"/"};
 
 // System
+unsigned long MemoryUtilizationEntry(std::ifstream& f, std::string expectedEntryName);
 float MemoryUtilization();
 long UpTime();
 std::vector<int> Pids();
+int GetProcessesEntry(std::string entryName);
 int TotalProcesses();
 int RunningProcesses();
 std::string OperatingSystem();
@@ -38,20 +41,30 @@ enum CPUStates {
   kSoftIRQ_,
   kSteal_,
   kGuest_,
-  kGuestNice_
+  kGuestNice_,
+  kNumCpuStates_
 };
-std::vector<std::string> CpuUtilization();
-long Jiffies();
-long ActiveJiffies();
-long ActiveJiffies(int pid);
-long IdleJiffies();
+std::vector<unsigned long long> CpuUtilization();
+unsigned long long Jiffies();
+unsigned long long ActiveJiffies();
+unsigned long long IdleJiffies();
+unsigned long long ActiveJiffies(int pid);
 
 // Processes
+std::string ProcessFolderPath(int pid);
 std::string Command(int pid);
 std::string Ram(int pid);
-std::string Uid(int pid);
-std::string User(int pid);
-long int UpTime(int pid);
+int Uid(int pid);
+long StartTimeAfterBoot(int pid);
+bool ProcessHasEnded(int pid);
+
+// Users
+std::string UserFromUid(int uid);
+  
+// Helpers
+std::string GetRestOfLineAfterToken(const std::string filepath, const std::string token);
+void SkipNTokens(std::ifstream& filestream, const int n);
+
 };  // namespace LinuxParser
 
 #endif
