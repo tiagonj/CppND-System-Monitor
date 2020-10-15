@@ -1,6 +1,5 @@
 #include <cassert>
 #include <cmath>
-#include <dirent.h>
 #include <experimental/filesystem>
 #include <string>
 #include <vector>
@@ -8,6 +7,8 @@
 
 #include "linux_parser.h"
 
+using dir_it = std::experimental::filesystem::directory_iterator;
+using std::experimental::filesystem::path;
 using std::ifstream;
 using std::istringstream;
 using std::stof;
@@ -52,28 +53,29 @@ string LinuxParser::Kernel() {
   return kernel;
 }
 
-// BONUS: Update this to use std::filesystem
-vector<int> LinuxParser::Pids() {
+// Get list of PIDs for all active processes
+vector<int> LinuxParser::Pids()
+{
   vector<int> pids;
-  DIR* directory = opendir(kProcDirectory.c_str());
-  struct dirent* file;
-  while ((file = readdir(directory)) != nullptr) {
-    // Is this a directory?
-    if (file->d_type == DT_DIR) {
-      // Is every character of the name a digit?
-      string filename(file->d_name);
-      if (std::all_of(filename.begin(), filename.end(), isdigit)) {
-        int pid = stoi(filename);
+
+  for(auto it = dir_it(kProcDirectory); it != dir_it(); ++it)
+  {
+    if(std::experimental::filesystem::is_directory(it->path()))
+    {
+      string foldername(it->path().stem());
+
+      if (std::all_of(foldername.begin(), foldername.end(), isdigit))
+      {
+        int pid = stoi(foldername);
         pids.push_back(pid);
       }
     }
   }
-  closedir(directory);
   return pids;
 }
 
 // Read and return value for one line of meminfo file
-unsigned long LinuxParser::MemoryUtilizationEntry(std::string path, std::string entryName)
+unsigned long LinuxParser::MemoryUtilizationEntry(string path, string entryName)
 {
   string line = LinuxParser::GetRestOfLineAfterToken(path, entryName);
   std::replace(line.begin(), line.end(), ':', ' ');
