@@ -80,3 +80,9 @@ The following summarises the extra functionality implemented in this project
 * ❌ Port the program to another operating system
 
 \* (see `refresh.h` and `utilization.h` interfaces)
+
+## Preview
+
+The image below shows how the monitor looks on my machine (see `Development & test environment` section above)
+
+![System Monitor Ready For Submission](images/ready_for_submission.png)
